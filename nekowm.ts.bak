@@ -20,7 +20,6 @@ Object.keys(modifiers).forEach(key => {
 
 const modkey: number = modifiers.Mod4
 let last_event_seq: any
-const gaps = 8
 
 x11.createClient({display: screen}, (err: any, display: any, ) => {
 
@@ -94,7 +93,6 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
     //        mask.writeUInt32LE(1 << 0)
     //        XI2.SelectEvents(root, [{deviceid: 2, mask}])
     //    })
-
     //    X.om('event', (event: any) => {
     //        if(event.name == 'RawKeyPress') {
     //            Keybindings(event, X, root, keycodes, clients, resolution, true, last_event_seq)
@@ -114,8 +112,8 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
             case 'KeyPress':
             //case 'RawKeyPress':
                 //X.GrabKeyboard(root, false, 1, 1, x11.Time.CurrentTime)
-                Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq)
-                //Keybindings(event, X, root, keycodes, clients, resolution)
+                //Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq)
+                Keybindings(event, X, root, keycodes, clients, resolution)
                 //X.UngabKeyboard(x11.Time.CurrentTime)
                 break
         }
@@ -238,12 +236,13 @@ function DestroyWindow(win: number, X: any, clients: any, root: number, resoluti
     Tile(X,clients, resolution)
 }
 
-function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[], raw: boolean, last_event_seq: any) {
-//function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[]) {
+//function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[], raw: boolean, last_event_seq: any) {
+function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[]) {
     let key: number
     let state: number
-    //key = event.keycode
-    //state = event.rawData.readUInt16LE(28);
+    key = event.keycode
+    state = event.rawData.readUInt16LE(28);
+    let key_name: string = keycodes[String(key)][0]
 
     //if(event.seq == last_event_seq) {
     //    return
@@ -251,16 +250,15 @@ function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: an
 
     //last_event_seq = event.seq
 
-    if(raw) {
-        key = event.detail
-        state = event.mods.effective
-    }
-    else {
-        key = event.keycode
-        state = event.rawData.readUInt16LE(28);
-    }
+    //if(raw) {
+    //    key = event.detail
+    //    state = event.mods.effective
+    //}
+    //else {
+    //    key = event.keycode
+    //    state = event.rawData.readUInt16LE(28);
+    //}
     //console.log(key, state, key_name)
-    let key_name: string = keycodes[String(key)][0]
     if(state == modkey) {
         switch(key_name) {
             case 'XK_Return':
@@ -348,25 +346,53 @@ function Tile(X: any, clients: any, resolution: any) {
         return
     }
 
-    let win_x: number = gaps
-    let win_y: number = gaps
-    let win_width: number = resolution[0] - gaps * 2
-    let win_height: number = resolution[1] - gaps * 2
+    let win_x: number = 0
+    let win_y: number = 0
+    let win_width: number = resolution[0]
+    let win_height: number = resolution[1]
 
     if(clients.length > 1) {
-        win_width = resolution[0] / 2 - gaps * 2
+        win_width = resolution[0] / 2
     }
 
     if(clients.length == 4) {
-        win_height = resolution[1] / 2 - gaps * 2
+        win_height = resolution[1] / 2
     }
 
     for(let i:number = 0; i < clients.length; i++) {
+    //    if(i > 0) {
+    //        win_x = resolution[0] / 2
+    //        win_height = resolution[1] / 2
+
+    //        if(clients.length == 3) {
+    //            if(i == 2) {
+    //                win_y = resolution[1] / 2
+    //            }
+    //        }
+
+    //        else if(clients.length == 4) {
+    //            if(i == 1) {
+    //                win_x = 0
+    //                win_y = resolution[1] / 2
+    //            }
+
+    //            if(i == 3) {
+    //                win_x = resolution[1] / 2
+    //            }
+    //        }
+    //    }
+
+    //    else {
+    //        if(clients.length == 4) {
+    //            win_height = resolution[1] / 2
+    //        }
+    //    }
+
         switch(clients.length) {
             case 2:
                 switch(i) {
                     case 1:
-                        win_x = resolution[0] / 2 + gaps
+                        win_x = resolution[0] / 2
                     break
                 }
                 break
@@ -374,14 +400,14 @@ function Tile(X: any, clients: any, resolution: any) {
             case 3:
                 switch(i) {
                     case 1:
-                        win_x = resolution[0] / 2 + gaps
-                        win_height = resolution[1] / 2 - gaps * 2
+                        win_x = resolution[0] / 2
+                        win_height = resolution[1] / 2
                         break
 
                     case 2:
-                        win_x = resolution[0] / 2 + gaps
-                        win_y = resolution[1] / 2 + gaps
-                        win_height = resolution[1] / 2 - gaps * 2
+                        win_x = resolution[0] / 2
+                        win_y = resolution[1] / 2
+                        win_height = resolution[1] / 2
                         break
                 }
                 break
@@ -389,17 +415,17 @@ function Tile(X: any, clients: any, resolution: any) {
             case 4:
                 switch(i) {
                     case 1:
-                        win_y = resolution[1] / 2 + gaps
+                        win_y = resolution[1] / 2
                         break
 
                     case 2:
-                        win_x = resolution[0] / 2 + gaps
-                        win_y = gaps
+                        win_x = resolution[0] / 2
+                        win_y = 0
                         break
 
                     case 3:
-                        win_x = resolution[0] / 2 + gaps
-                        win_y = resolution[1] / 2 + gaps
+                        win_x = resolution[0] / 2
+                        win_y = resolution[1] / 2
                         break
                 }
                 break
@@ -436,6 +462,5 @@ function Tile(X: any, clients: any, resolution: any) {
     //        height: resolution[1]
     //    })
     //}
-    //X.SetInputFocus(clients[0][0], 0, 0)
-    X.SetInputFocus(clients[clients.length - 1][0], 0, 0)
+    X.SetInputFocus(clients[0][0], 0, 0)
 }
