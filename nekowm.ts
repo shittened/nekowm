@@ -1,8 +1,19 @@
 const x11 = require('x11') as any
 const Exec = require('child_process').exec
+import {ChangeFocus} from './src/focus-window.ts'
+import {Tile} from './src/tile.ts'
+import {Keybindings} from './src/keybindings.ts'
+import {DestroyWindow} from './src/destroy-window.ts'
+import {CreateWindow} from './src/create-window.ts'
+import {config} from './config.ts'
+import {IncMasters} from './src/inc-masters.ts'
+import {ChangeWorkspace} from './src/change-workspace.ts'
+import {MoveWindow} from './src/move-window.ts'
+import {WindowChangeWorkspace} from './src/window-change-workspace.ts'
+import {Spotlight} from './src/spotlight.ts'
 
 const base_key: number = 16
-let modifiers: {} = {
+const modifiers: {} = {
     Shift: 1,
     Lock: 2,     // Caps Lock
     Control: 4,
@@ -18,9 +29,16 @@ Object.keys(modifiers).forEach(key => {
     modifiers[key] += base_key
 })
 
-const modkey: number = modifiers.Mod4
+const modkey: number = modifiers[config.mod]
 let last_event_seq: any
-const gaps = 8
+const variables: {} = {
+    focused_window_index: 0,
+    masters: 1,
+    layout: config.layout,
+    gaps: config.gaps,
+    current_workspace: 0,
+    workspace_windows: [],
+}
 
 x11.createClient({display: screen}, (err: any, display: any, ) => {
 
@@ -36,7 +54,6 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
     const X: any = display.client
     const root: number = display.screen[0].root
     const resolution: number[] = [display.screen[0].pixel_width, display.screen[0].pixel_height]
-    //const clients: any = new Map<number, number>()
     let clients: any = []
     const key_min: number = display.min_keycode
     const key_max: number = display.max_keycode 
@@ -51,11 +68,12 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
             process.exit(1)
         }
         for (let code = key_min; code <= key_max; code++) {
-            X.GrabKey(root, 0, 8, code, 1, 1)
+            X.GrabKey(root, 0, 64, code, 1, 1)
         }
     })
 
     console.log('Welcome to nekowm')
+    //Exec('echo ' + display + ' > ./logs.txt')
 
     X.on('error', (err: any) => {
         console.error('X error:', err)
@@ -106,336 +124,26 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
         //console.log('X event:', event)
         switch(event.name) {
             case 'MapRequest':
-                CreateWindow(event, X, root, resolution, clients)
+                CreateWindow(event, X, root, resolution, clients, variables, x11)
+                Tile(X, root, clients, resolution, variables)
                 break
             case 'DestroyNotify':
-                DestroyWindow(event.wid, X, clients, root, resolution)
+                DestroyWindow(event.wid, X, root, clients)
+                Tile(X, root, clients, resolution, variables)
                 break
             case 'KeyPress':
             //case 'RawKeyPress':
                 //X.GrabKeyboard(root, false, 1, 1, x11.Time.CurrentTime)
-                Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq)
+                Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq, variables, Exec, DestroyWindow, ChangeFocus, modkey, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight)
                 //Keybindings(event, X, root, keycodes, clients, resolution)
                 //X.UngabKeyboard(x11.Time.CurrentTime)
                 break
         }
     })
 
-    Exec('nitrogen --restore')
+    //InitAtoms(X)
+
+    for(let i: number = 0; i < config.startup.length; i++) {
+        Exec(config.startup[i])
+    }
 })
-
-function CreateWindow(event: any, X: any, root: number, resolution: number[], clients: any) {
-    const event_masks_create: any = x11.eventMask.Exposure | x11.eventMask.StructureNotify
-    const event_masks: any = x11.eventMask.Exposure | x11.eventMask.StructureNotify | x11.eventMask.KeyPress
-    const win: number = event.wid
-    const frame: number = X.AllocID()
-
-    if(clients.length == 4) return
-    //Exec('echo ' + clients.length + ' >> ./logs.txt')
-
-    //if(clients.length == 0) {
-    //        X.CreateWindow(frame, root, 0, 0, resolution[0], resolution[1], 0, 0, 0, 0, {eventMask: event_masks_create})
-
-    //        X.ConfigureWindow(win, {
-    //            x: 0, 
-    //            y: 0, 
-    //            width: resolution[0], 
-    //            height: resolution[1]
-    //        })
-    //}
-
-    //else {
-    //    X.CreateWindow(frame, root, 0, 0, resolution[0] / 2, resolution[1], 0, 0, 0, 0, {eventMask: event_masks_create})
-    //    X.ConfigureWindow(win, {
-    //        x: 0,
-    //        y: 0,
-    //        width: resolution[0] / 2,
-    //        height: resolution[1]
-    //    })
-
-    //    switch(clients.length) {
-    //        case 1:
-    //            X.ConfigureWindow(clients[0][0], {
-    //                x: 0,
-    //                y: 0,
-    //                width: resolution[0] / 2,
-    //                height: resolution[1]
-    //            })
-
-    //            X.ConfigureWindow(clients[0][1], {
-    //                x: resolution[0] / 2,
-    //                y: 0,
-    //                width: resolution[0] / 2,
-    //                height: resolution[1]
-    //            })
-
-    //            break
-
-    //        //case 2:
-    //        //    X.ConfigureWindow(clients[0][0], {
-    //        //        width: resolution[0] / 2,
-    //        //        height: resolution[1] / 2
-    //        //    })
-
-    //        //    X.ConfigureWindow(clients[0][1], {
-    //        //        x: resolution[0] / 2,
-    //        //        width: resolution[0] / 2,
-    //        //        height: resolution[1] / 2
-    //        //    })
-
-    //        //    X.ConfigureWindow(clients[1][0], {
-    //        //        width: resolution[0] / 2,
-    //        //        height: resolution[1] / 2
-    //        //    })
-
-    //    }
-    //}
-    X.CreateWindow(frame, root, 0, 0, resolution[0], resolution[1], 0, 0, 0, 0, {eventMask: event_masks_create})
-
-    X.ReparentWindow(win, frame, 0, 0);
-    X.MapWindow(frame)
-    X.MapWindow(win)
-
-    X.ChangeWindowAttributes(win, {eventMask: event_masks})
-    clients.push([win, frame])
-    Tile(X, clients, resolution)
-    X.SetInputFocus(win, 0, 0)
-}
-
-function DestroyWindow(win: number, X: any, clients: any, root: number, resolution: number[]) {
-    let next_win: number[]
-
-    for(let i: number = 0; i < clients.length; i++) {
-        if(clients[i][0] == win) {
-            if(clients.length > 1) {
-                //if(i != 0) {
-                //    next_win = clients[0]
-                //}
-                //else {
-                //    next_win = clients[1]   
-                //}
-                //X.ConfigureWindow(next_win[0], {
-                //    width: resolution[0],
-                //})
-
-                //X.ConfigureWindow(next_win[1], {
-                //    x: 0,
-                //    width: resolution[0],
-                //})
-
-                //X.SetInputFocus(next_win[0], 0, 0)
-                X.SetInputFocus(clients[0][0], 0, 0)
-            }
-            else {
-                X.SetInputFocus(root, 0, 0)
-            }
-
-            X.DestroyWindow(clients[i][1])
-            clients.splice(i, 1)
-            break
-         }
-    }
-    Tile(X,clients, resolution)
-}
-
-function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[], raw: boolean, last_event_seq: any) {
-//function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[]) {
-    let key: number
-    let state: number
-    //key = event.keycode
-    //state = event.rawData.readUInt16LE(28);
-
-    //if(event.seq == last_event_seq) {
-    //    return
-    //}
-
-    //last_event_seq = event.seq
-
-    if(raw) {
-        key = event.detail
-        state = event.mods.effective
-    }
-    else {
-        key = event.keycode
-        state = event.rawData.readUInt16LE(28);
-    }
-    //console.log(key, state, key_name)
-    let key_name: string = keycodes[String(key)][0]
-    if(state == modkey) {
-        switch(key_name) {
-            case 'XK_Return':
-                OpenApp(X, 'kitty')
-                break
-            case 'XK_q':
-                DestroyWindow(event.wid, X, clients, root, resolution)
-                break
-            case 'XK_r':
-                OpenApp(X, 'dmenu_run')
-                break
-            case 'XK_Delete':
-                Reload()
-                break
-            case 'XK_x':
-                Exec('killall Xorg')
-                break
-        }
-    }
-}
-
-function OpenApp(X: any, appname: string) {
-    Exec('DISPLAY=' + screen + ' ' + appname)
-}
-
-function Reload() {
-    Exec('./reload.sh ' + screen)
-}
-
-function SetNormalHints(X: any, win: number, width: number, height: number) {
-    const hints = Buffer.alloc(18 * 4)
-
-    const psize = 1 << 5
-    const pminsize = 1 << 1
-    const pmaxsize = 1 << 2
-    const resizeinc = 1 << 16
-
-    hints.writeUInt32LE(psize | pminsize | pmaxsize | resizeinc, 0)
-    hints.writeUInt32LE(0, 4)
-    hints.writeUInt32LE(0, 8)
-    hints.writeUInt32LE(width, 12)
-    hints.writeUInt32LE(height, 16)
-    hints.writeUInt32LE(width, 20)
-    hints.writeUInt32LE(height, 24)
-    hints.writeUInt32LE(width, 28)
-    hints.writeUInt32LE(height, 32)
-    hints.writeUInt32LE(1, 36)
-    hints.writeUInt32LE(1, 40)
-
-    X.ChangeProperty(0, win, X.atoms.WM_NORMAL_HINTS, X.atoms.WM_SIZE_HINTS, 32, hints)
-}
-
-function SetNetWMName(X: any, win: number, name: string) {
-    X.ChangeProperty(0, win, X.atoms._NET_WM_NAME, X.atoms.UTF8_STRING, 8, Buffer.from(name))
-}
-
-function SetNetWMState(X: any, win: number, states: number[]) {
-    const buf = Buffer.alloc(states.length * 4)
-
-    for(let i: number = 0; i < states.length; i++) {
-        buf.writeUInt32LE(states[i], i * 4)
-    }
-
-    X.ChangeProperty(0, win, X.atoms._NET_WM_STATE, X.atoms.ATOM, 32, buf)
-}
-
-function InitAtoms(X: any) {
-    const atom_names = [
-        'WM_NORMAL_HINTS',
-        '_NET_WM_NAME',
-        'UTF8_STRING',
-        '_NET_WM_STATE',
-        '_NET_WM_STATE_MAXIMIZED_HORZ',
-        '_NET_WM_STATE_MAXIMIZED_VERT',
-    ]
-
-    X.InternAtom(false, atom_names, (err: any, atoms: Record<string, number>) => {
-        if(err) throw err
-        X.atoms = atoms
-    })
-}
-
-function Tile(X: any, clients: any, resolution: any) {
-    if(clients.length == 0) {
-        return
-    }
-
-    let win_x: number = gaps
-    let win_y: number = gaps
-    let win_width: number = resolution[0] - gaps * 2
-    let win_height: number = resolution[1] - gaps * 2
-
-    if(clients.length > 1) {
-        win_width = resolution[0] / 2 - gaps * 2
-    }
-
-    if(clients.length == 4) {
-        win_height = resolution[1] / 2 - gaps * 2
-    }
-
-    for(let i:number = 0; i < clients.length; i++) {
-        switch(clients.length) {
-            case 2:
-                switch(i) {
-                    case 1:
-                        win_x = resolution[0] / 2 + gaps
-                    break
-                }
-                break
-
-            case 3:
-                switch(i) {
-                    case 1:
-                        win_x = resolution[0] / 2 + gaps
-                        win_height = resolution[1] / 2 - gaps * 2
-                        break
-
-                    case 2:
-                        win_x = resolution[0] / 2 + gaps
-                        win_y = resolution[1] / 2 + gaps
-                        win_height = resolution[1] / 2 - gaps * 2
-                        break
-                }
-                break
-
-            case 4:
-                switch(i) {
-                    case 1:
-                        win_y = resolution[1] / 2 + gaps
-                        break
-
-                    case 2:
-                        win_x = resolution[0] / 2 + gaps
-                        win_y = gaps
-                        break
-
-                    case 3:
-                        win_x = resolution[0] / 2 + gaps
-                        win_y = resolution[1] / 2 + gaps
-                        break
-                }
-                break
-        }
-
-        X.ConfigureWindow(clients[i][0], {
-            x: 0,
-            y: 0,
-            width: win_width,
-            height: win_height
-        })
-
-        X.ConfigureWindow(clients[i][1], {
-            x: win_x,
-            y: win_y,
-            width: win_width,
-            height: win_height
-        })
-
-    }
-
-    //for(let i:number = 0; i < clients.length; i++) {
-    //    X.ConfigureWindow(clients[i][0], {
-    //        x: 0,
-    //        y: 0,
-    //        width: Math.floor(resolution[0] / clients.length),
-    //        height: resolution[1]
-    //    })
-
-    //    X.ConfigureWindow(clients[i][1], {
-    //        x: Math.floor(resolution[0] / clients.length) * i,
-    //        y: 0,
-    //        width: Math.floor(resolution[0] / clients.length),
-    //        height: resolution[1]
-    //    })
-    //}
-    //X.SetInputFocus(clients[0][0], 0, 0)
-    X.SetInputFocus(clients[clients.length - 1][0], 0, 0)
-}
