@@ -15,19 +15,18 @@ export function ChangeFocus(X: any, direction: number, clients: any, variables: 
         return
     }
 
+    windows.sort((a: any, b: any) => a.at(-1) - b.at(-1))
+
     let next_focus = variables.focused_window_index + direction
 
     if(next_focus < 0) {
-        //next_focus = clients.length - 1
         next_focus = windows.length - 1
     }
 
-    //if(next_focus > clients.length - 1) {
     if(next_focus > windows.length - 1) {
         next_focus = 0
     }
 
-    //X.SetInputFocus(clients[next_focus][0], 0, 0)
     X.SetInputFocus(windows[next_focus][0], 0, 0)
     variables.focused_window_index = next_focus
 }

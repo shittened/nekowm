@@ -62,8 +62,6 @@ export function Keybindings(event: any, X: any, root: number, keycodes: {}, clie
     }
 
     if(state == modkey + 1) {
-        let win: number
-
         switch(key_name) {
             case 'XK_o':
                 IncMasters(variables, 1)
@@ -74,14 +72,14 @@ export function Keybindings(event: any, X: any, root: number, keycodes: {}, clie
                 Tile(X, root, clients, resolution, variables)
                 break
             case 'XK_Left':
-                win = MoveWindow(event.wid, clients, -1)
+                MoveWindow(event.wid, clients, variables, -1)
                 Tile(X, root, clients, resolution, variables)
-                //X.SetInputFocus(win, 0, 0)
+                X.SetInputFocus(event.wid, 0, 0)
                 break
             case 'XK_Right':
-                win = MoveWindow(event.wid, clients, 1)
+                MoveWindow(event.wid, clients, variables, 1)
                 Tile(X, root, clients, resolution, variables)
-                //X.SetInputFocus(win, 0, 0)
+                X.SetInputFocus(event.wid, 0, 0)
                 break
             case 'XK_1':
             case 'XK_2':

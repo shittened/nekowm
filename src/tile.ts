@@ -23,8 +23,7 @@ export function Tile(X: any, root: number, clients: any, resolution: number[], v
         return
     }
 
-    //TODO windows.sort() by windows[i][3]
-    //windows.sort()
+    windows.sort((a: any, b: any) => a.at(-1) - b.at(-1))
 
     switch(variables.layout) {
         case 'master-stack':
