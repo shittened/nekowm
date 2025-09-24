@@ -16,14 +16,14 @@ export function Spotlight(X: any, clients: any, variables: any, resolution: numb
     }
 
     
-    X.ConfigureWindow(windows[0][0], {
-        x: 0,
-        y: 0,
-        width: Math.floor(resolution[0] / 1.5),
-        height: Math.floor(resolution[1] / 1.5)
-    })
+    //X.ConfigureWindow(windows[0][0], {
+    //    x: 0,
+    //    y: 0,
+    //    width: Math.floor(resolution[0] / 1.5),
+    //    height: Math.floor(resolution[1] / 1.5)
+    //})
 
-    X.ConfigureWindow(windows[0][1], {
+    X.ConfigureWindow(windows[0][0], {
         x: resolution[0] / 6,
         y: resolution[1] / 6,
         width: Math.floor(resolution[0] / 1.5),

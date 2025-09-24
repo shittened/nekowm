@@ -1,50 +1,30 @@
-export function Keybindings(event: any, X: any, root: number, keycodes: {}, clients: any, resolution: number[], 
-    raw: boolean, last_event_seq: any, variables: any, Exec: any, DestroyWindow: any, ChangeFocus: any, modkey: number, Tile: any, IncMasters: any, ChangeWorkspace: any, MoveWindow: any, WindowChangeWorkspace: any, Spotlight: any, ChangeBorderColor: any) {
+export function Keybindings(key: any, mods: any, keycodes: any, X: any, root: number, clients: any, resolution: number[], variables: any, DestroyWindow: any, ChangeFocus: any, Tile: any, IncMasters: any, ChangeWorkspace: any, MoveWindow: any, WindowChangeWorkspace: any, Spotlight: any, exec: any) {
 
-    let key: number
-    let state: number
-    //key = event.keycode
-    //state = event.rawData.readUInt16LE(28);
+    //if(!(keycodes[String(key)])) return
 
-    //if(event.seq == last_event_seq) {
-    //    return
-    //}
+    let key_name: string = keycodes[keycode]?.[0] || 'unknown';
+    const modkey: any = 0x40
 
-    //last_event_seq = event.seq
-
-    if(raw) {
-        key = event.detail
-        state = event.mods.effective
-    }
-    else {
-        key = event.keycode
-        state = event.rawData.readUInt16LE(28);
-    }
-    //console.log(key, state, key_name)
-    let key_name: string = keycodes[String(key)][0]
-    if(state == modkey) {
+    if ((mods & modkey) !== 0) {
         switch(key_name) {
             case 'XK_Return':
-                Exec('kitty')
+                exec('kitty')
                 break
             case 'XK_q':
                 DestroyWindow(event.wid, X, root, clients)
                 Tile(X, root, clients, resolution, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_r':
-                Exec('dmenu_run')
+                exec('dmenu_run')
                 break
             case 'XK_Delete':
-                Exec('killall bun')
+                exec('killall bun')
                 break
             case 'XK_Left':
                 ChangeFocus(X, -1, clients, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_Right':
                 ChangeFocus(X, 1, clients, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_1':
             case 'XK_2':
@@ -57,7 +37,6 @@ export function Keybindings(event: any, X: any, root: number, keycodes: {}, clie
             case 'XK_9':
                 ChangeWorkspace(key_name, X, clients, variables)
                 Tile(X, root, clients, resolution, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_F10':
                 Spotlight(X, clients, variables, resolution)
@@ -70,24 +49,20 @@ export function Keybindings(event: any, X: any, root: number, keycodes: {}, clie
             case 'XK_o':
                 IncMasters(variables, 1)
                 Tile(X, root, clients, resolution, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_p':
                 IncMasters(variables, -1)
                 Tile(X, root, clients, resolution, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_Left':
                 MoveWindow(event.wid, clients, variables, -1)
                 Tile(X, root, clients, resolution, variables)
                 X.SetInputFocus(event.wid, 0, 0)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_Right':
                 MoveWindow(event.wid, clients, variables, 1)
                 Tile(X, root, clients, resolution, variables)
                 X.SetInputFocus(event.wid, 0, 0)
-                ChangeBorderColor(X, clients, variables)
                 break
             case 'XK_1':
             case 'XK_2':
@@ -100,7 +75,6 @@ export function Keybindings(event: any, X: any, root: number, keycodes: {}, clie
             case 'XK_9':
                 WindowChangeWorkspace(key_name, X, clients, variables, event.wid)
                 Tile(X, root, clients, resolution, variables)
-                ChangeBorderColor(X, clients, variables)
                 break
         }
     }

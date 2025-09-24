@@ -3,7 +3,7 @@ export function DestroyWindow(win: number, X: any, root: number, clients: any) {
         if(clients[i][0] == win) {
             X.SetInputFocus(root, 0, 0)
 
-            X.DestroyWindow(clients[i][1])
+            X.DestroyWindow(clients[i][0])
             clients.splice(i, 1)
             break
          }

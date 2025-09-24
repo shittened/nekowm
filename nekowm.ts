@@ -1,5 +1,6 @@
 const x11 = require('x11') as any
-const Exec = require('child_process').exec
+//const Exec = require('child_process').exec
+import {exec, spawn} from 'child_process'
 import {ChangeFocus} from './src/focus-window.ts'
 import {Tile} from './src/tile.ts'
 import {Keybindings} from './src/keybindings.ts'
@@ -11,6 +12,8 @@ import {ChangeWorkspace} from './src/change-workspace.ts'
 import {MoveWindow} from './src/move-window.ts'
 import {WindowChangeWorkspace} from './src/window-change-workspace.ts'
 import {Spotlight} from './src/spotlight.ts'
+import {HoverFocus} from './src/hover-focus.ts'
+import {ChangeBorderColor} from './src/change-border-color.ts'
 
 const base_key: number = 16
 const modifiers: {} = {
@@ -73,7 +76,6 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
     })
 
     console.log('Welcome to nekowm')
-    //Exec('echo ' + display + ' > ./logs.txt')
 
     X.on('error', (err: any) => {
         console.error('X error:', err)
@@ -104,20 +106,19 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
         }
     })
 
-    //X.QueryExtension('XInpuExtension', (err: any, ext: any) => {
-    //    if(err) throw err
-    //    X.require('xinput2', (err: any, XI2: any) => {
-    //        if(err) throw err
-    //        const mask = Buffer.alloc(4)
-    //        mask.writeUInt32LE(1 << 0)
-    //        XI2.SelectEvents(root, [{deviceid: 2, mask}])
-    //    })
+    //const rawkeys: any = spawn('./rawkeys')
 
-    //    X.om('event', (event: any) => {
-    //        if(event.name == 'RawKeyPress') {
-    //            Keybindings(event, X, root, keycodes, clients, resolution, true, last_event_seq)
-    //        }
-    //    })
+    //rawkeys.stdout.on('data', (data: any) => {
+    //    const line = data.toString().trim();
+    //    
+    //    // Expected format from rawkeys: "keycode: 36 mods: 0x40"
+    //    const match = line.match(/keycode: (\d+) mods: (0x[0-9a-fA-F]+)/);
+    //    if (!match) return;
+
+    //    const key = parseInt(match[1], 10);
+    //    const mods = parseInt(match[2], 16);
+
+    //    Keybindings(key, mods, keycodes, X, root, clients, resolution, variables, DestroyWindow, ChangeFocus, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight, exec)
     //})
         
     X.on('event', (event: any) => {
@@ -126,6 +127,7 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
             case 'MapRequest':
                 CreateWindow(event, X, root, resolution, clients, variables, x11)
                 Tile(X, root, clients, resolution, variables)
+                ChangeBorderColor(X, clients, variables)
                 break
             case 'DestroyNotify':
                 DestroyWindow(event.wid, X, root, clients)
@@ -133,17 +135,15 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
                 break
             case 'KeyPress':
             //case 'RawKeyPress':
-                //X.GrabKeyboard(root, false, 1, 1, x11.Time.CurrentTime)
-                Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq, variables, Exec, DestroyWindow, ChangeFocus, modkey, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight)
-                //Keybindings(event, X, root, keycodes, clients, resolution)
-                //X.UngabKeyboard(x11.Time.CurrentTime)
+                Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq, variables, exec, DestroyWindow, ChangeFocus, modkey, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight, ChangeBorderColor)
                 break
+            case 'EnterNotify':
+                HoverFocus(X, event, clients, variables)
+                ChangeBorderColor(X, clients, variables)
         }
     })
 
-    //InitAtoms(X)
-
     for(let i: number = 0; i < config.startup.length; i++) {
-        Exec(config.startup[i])
+        exec(config.startup[i])
     }
 })

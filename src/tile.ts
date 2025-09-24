@@ -59,32 +59,18 @@ export function Tile(X: any, root: number, clients: any, resolution: number[], v
                 }
 
                 X.ConfigureWindow(windows[i][0], {
-                    x: 0,
-                    y: 0,
-                    width: win_width,
-                    height: win_height
-                })
-
-                X.ConfigureWindow(windows[i][1], {
                     x: win_x,
                     y: win_y,
-                    width: win_width,
-                    height: win_height
+                    width: win_width - 8,
+                    height: win_height - 8,
+                    borderWidth: 4,
                 })
-
             }
         break
 
         case 'columns':
             for(let i:number = 0; i < windows.length; i++) {
                 X.ConfigureWindow(windows[i][0], {
-                    x: 0,
-                    y: 0,
-                    width: Math.floor(resolution[0] / windows.length),
-                    height: resolution[1]
-                })
-
-                X.ConfigureWindow(windows[i][1], {
                     x: Math.floor(resolution[0] / windows.length) * i,
                     y: 0,
                     width: Math.floor(resolution[0] / windows.length),
