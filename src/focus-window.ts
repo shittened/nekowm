@@ -11,7 +11,7 @@ export function ChangeFocus(X: any, direction: number, clients: any, variables: 
         }
     }
 
-    if(windows.length < 2) {
+    if(windows.length < 1) {
         return
     }
 
@@ -19,13 +19,13 @@ export function ChangeFocus(X: any, direction: number, clients: any, variables: 
 
     let next_focus = variables.focused_window_index + direction
 
-    if(next_focus < 0) {
-        next_focus = windows.length - 1
-    }
+   if(next_focus < 0) {
+       next_focus = windows.length - 1
+   }
 
-    if(next_focus > windows.length - 1) {
-        next_focus = 0
-    }
+   if(next_focus > windows.length - 1) {
+       next_focus = 0
+   }
 
     X.SetInputFocus(windows[next_focus][0], 0, 0)
     variables.focused_window_index = next_focus

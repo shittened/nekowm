@@ -1,5 +1,4 @@
 const x11 = require('x11') as any
-//const Exec = require('child_process').exec
 import {exec, spawn} from 'child_process'
 import {ChangeFocus} from './src/focus-window.ts'
 import {Tile} from './src/tile.ts'
@@ -14,6 +13,9 @@ import {WindowChangeWorkspace} from './src/window-change-workspace.ts'
 import {Spotlight} from './src/spotlight.ts'
 import {HoverFocus} from './src/hover-focus.ts'
 import {ChangeBorderColor} from './src/change-border-color.ts'
+import {ResizeWindow} from './src/resize-window.ts'
+import {createCanvas} from 'canvas'
+import {Bar} from './src/bar.ts'
 
 const base_key: number = 16
 const modifiers: {} = {
@@ -33,7 +35,6 @@ Object.keys(modifiers).forEach(key => {
 })
 
 const modkey: number = modifiers[config.mod]
-let last_event_seq: any
 const variables: {} = {
     focused_window_index: 0,
     masters: 1,
@@ -41,6 +42,8 @@ const variables: {} = {
     gaps: config.gaps,
     current_workspace: 0,
     workspace_windows: [],
+    master_width: 0,
+    border_width: config.border_width,
 }
 
 x11.createClient({display: screen}, (err: any, display: any, ) => {
@@ -70,9 +73,9 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
             console.error('Another WM already running')
             process.exit(1)
         }
-        for (let code = key_min; code <= key_max; code++) {
-            X.GrabKey(root, 0, 64, code, 1, 1)
-        }
+        //for (let code = key_min; code <= key_max; code++) {
+        //    X.GrabKey(root, 0, 64, code, 1, 1)
+        //}
     })
 
     console.log('Welcome to nekowm')
@@ -106,37 +109,54 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
         }
     })
 
-    //const rawkeys: any = spawn('./rawkeys')
+    const rawkeys: any = spawn('/home/shitten/projects/nekowm/rawkeys')
 
-    //rawkeys.stdout.on('data', (data: any) => {
-    //    const line = data.toString().trim();
-    //    
-    //    // Expected format from rawkeys: "keycode: 36 mods: 0x40"
-    //    const match = line.match(/keycode: (\d+) mods: (0x[0-9a-fA-F]+)/);
-    //    if (!match) return;
+    rawkeys.stdout.on('data', (data: any) => {
+        let line: any = data.toString().trim().split(':');
+        
+        if(line[0] == 'release') {
+            return
+        }
 
-    //    const key = parseInt(match[1], 10);
-    //    const mods = parseInt(match[2], 16);
+        line = line[1].split(',')
+        const keycode = Math.floor(line[0].split('=')[1])
+        const mask = Math.floor(line[1].split('=')[1].split('x')[1])
 
-    //    Keybindings(key, mods, keycodes, X, root, clients, resolution, variables, DestroyWindow, ChangeFocus, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight, exec)
-    //})
+        //exec('xcowsay "' + keycode + ' '+ mask + '"')
+        //if(mask != '0x50') {
+        if(mask < 40) {
+            return
+        }
+
+        //let windows: any = []
+
+        //for(let i: number = 0; i < clients.length; i++) {
+        //    if(clients[i][2] == variables.current_workspace) {
+        //        windows.push(clients[i])
+        //    }
+        //}
+
+        //windows.sort((a: any, b: any) => a.at(-1) - b.at(-1))
+
+        Keybindings(X, root, keycode, mask, keycodes, clients, resolution, variables, exec, DestroyWindow, ChangeFocus, modkey, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight, ChangeBorderColor, ResizeWindow, config)
+    })
         
     X.on('event', (event: any) => {
-        //console.log('X event:', event)
+        //exec('xcowsay -t 0 ' + JSON.stringify(event))
         switch(event.name) {
             case 'MapRequest':
                 CreateWindow(event, X, root, resolution, clients, variables, x11)
-                Tile(X, root, clients, resolution, variables)
+                Tile(X, root, clients, resolution, variables, true, config)
                 ChangeBorderColor(X, clients, variables)
                 break
             case 'DestroyNotify':
-                DestroyWindow(event.wid, X, root, clients)
-                Tile(X, root, clients, resolution, variables)
+                DestroyWindow(false, event.wid, X, root, clients, variables)
+                Tile(X, root, clients, resolution, variables, true, config)
                 break
-            case 'KeyPress':
+            //case 'KeyPress':
             //case 'RawKeyPress':
-                Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq, variables, exec, DestroyWindow, ChangeFocus, modkey, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight, ChangeBorderColor)
-                break
+                //Keybindings(event, X, root, keycodes, clients, resolution, false, last_event_seq, variables, exec, DestroyWindow, ChangeFocus, modkey, Tile, IncMasters, ChangeWorkspace, MoveWindow, WindowChangeWorkspace, Spotlight, ChangeBorderColor, ResizeWindow)
+                //break
             case 'EnterNotify':
                 HoverFocus(X, event, clients, variables)
                 ChangeBorderColor(X, clients, variables)
@@ -146,4 +166,7 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
     for(let i: number = 0; i < config.startup.length; i++) {
         exec(config.startup[i])
     }
+
+    Bar(createCanvas, X, root, resolution, config)
+    //exec('python3 ~/projects/nekowm/src/nekobar.py')
 })

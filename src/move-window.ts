@@ -1,4 +1,4 @@
-export function MoveWindow(win: number, clients: any, variables: any, direction: number) {
+export function MoveWindow(clients: any, variables: any, direction: number) {
     let current_window_index: number
     let swapped_window_index: number
     let windows: any = []
@@ -11,24 +11,24 @@ export function MoveWindow(win: number, clients: any, variables: any, direction:
 
     windows.sort((a: any, b: any) => a.at(-1) - b.at(-1))
 
-    for(let i: number = 0; i < windows.length; i++) {
-        if(windows[i][0] == win) {
-            if(i + direction < 0 || i + direction > windows.length - 1) {
-                return
-            }
+    if(variables.focused_window_index + direction < 0) {
+        return
+    }
 
-            current_window_index = windows[i][3]
-            swapped_window_index = windows[i + direction][3]
+    if(variables.focused_window_index + direction > windows.length - 1) {
+        return
+    }
 
-            for(let j: number = 0; j < clients.length; j ++) {
-                if(windows[i] == clients[j]) {
-                    clients[j][3] = swapped_window_index
-                }
+    current_window_index = windows[variables.focused_window_index][3]
+    swapped_window_index = windows[variables.focused_window_index + direction][3]
 
-                if(windows[i + direction] == clients[j]) {
-                    clients[j][3] = current_window_index
-                }
-            }
+    for(let i: number = 0; i < clients.length; i++) {
+        if(clients[i] == windows[variables.focused_window_index]) {
+            clients[i][3] = swapped_window_index
+        }
+
+        if(clients[i] == windows[variables.focused_window_index + direction]) {
+            clients[i][3] = current_window_index
         }
     }
 }

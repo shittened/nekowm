@@ -1,84 +1,72 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/XInput2.h>
-#include <stdio.h>
-#include <string.h>
-#include <X11/keysym.h>
 #include <X11/XKBlib.h>
 
-int isModifier(unsigned int keycode, Display *dpy) {
-    KeySym ks = XKeycodeToKeysym(dpy, keycode, 0);
-    return ks == XK_Shift_L || ks == XK_Shift_R ||
-           ks == XK_Control_L || ks == XK_Control_R ||
-           ks == XK_Alt_L || ks == XK_Alt_R;
-}
-
-unsigned int getModifierMask(Display *dpy) {
-    char keys[32];
-    XQueryKeymap(dpy, keys);
-
-    unsigned int mask = 0;
-    for (int i = 0; i < 256; i++) {
-        if (keys[i / 8] & (1 << (i % 8))) {
-            KeySym ks = XKeycodeToKeysym(dpy, i, 0);
-            if (ks == XK_Shift_L || ks == XK_Shift_R) mask |= ShiftMask;
-            if (ks == XK_Control_L || ks == XK_Control_R) mask |= ControlMask;
-            if (ks == XK_Alt_L || ks == XK_Alt_R) mask |= Mod1Mask;
-        }
-    }
-    return mask;
-}
-
-int main() {
+int main(void) {
+    setvbuf(stdout, NULL, _IONBF, 0);
     Display *dpy = XOpenDisplay(NULL);
-    if (!dpy) return 1;
-
-    Window root = DefaultRootWindow(dpy);
-
-    int opcode, event, error;
-    if (!XQueryExtension(dpy, "XInputExtension", &opcode, &event, &error)) {
-        printf("XInput extension not available\n");
+    if (!dpy) {
+        fprintf(stderr, "Failed to open display\n");
         return 1;
     }
 
-    XIEventMask mask;
-    unsigned char mask_bits[(XI_LASTEVENT + 7)/8];
-    memset(mask_bits, 0, sizeof(mask_bits));
-    mask.deviceid = XIAllMasterDevices;
-    mask.mask_len = sizeof(mask_bits);
-    mask.mask = mask_bits;
-    XISetMask(mask.mask, XI_RawKeyPress);
-    XISetMask(mask.mask, XI_RawKeyRelease);
+    int xi_opcode, event, error;
+    if (!XQueryExtension(dpy, "XInputExtension", &xi_opcode, &event, &error)) {
+        fprintf(stderr, "X Input extension not available\n");
+        return 1;
+    }
 
-    XISelectEvents(dpy, root, &mask, 1);
-    XFlush(dpy);
+    int major = 2, minor = 0;
+    if (XIQueryVersion(dpy, &major, &minor) == BadRequest) {
+        fprintf(stderr, "XI2 not available. Need version 2.0 or higher\n");
+        return 1;
+    }
+
+    Window root = DefaultRootWindow(dpy);
+
+    XIEventMask evmask;
+    unsigned char mask[XIMaskLen(XI_RawKeyPress)] = {0};
+    evmask.deviceid = XIAllMasterDevices;
+    evmask.mask_len = sizeof(mask);
+    evmask.mask = mask;
+    XISetMask(mask, XI_RawKeyPress);
+    XISetMask(mask, XI_RawKeyRelease);
+
+    XISelectEvents(dpy, root, &evmask, 1);
+    XSync(dpy, False);
+
+    //printf("Listening for raw key events...\n");
 
     while (1) {
         XEvent ev;
         XNextEvent(dpy, &ev);
 
-        if (ev.xcookie.type == GenericEvent && ev.xcookie.extension == opcode &&
+        if (ev.xcookie.type == GenericEvent &&
+            ev.xcookie.extension == xi_opcode &&
             XGetEventData(dpy, &ev.xcookie)) {
 
-            XIRawEvent *re = (XIRawEvent*) ev.xcookie.data;
+            if (ev.xcookie.evtype == XI_RawKeyPress ||
+                ev.xcookie.evtype == XI_RawKeyRelease) {
 
-            unsigned int mods = getModifierMask(dpy);
-            printf("Raw keycode: %d, Modifier mask: 0x%x\n", re->detail, mods);
+                XIRawEvent *re = (XIRawEvent *) ev.xcookie.data;
+                unsigned int keycode = re->detail;
+
+                // Query the global modifier state here:
+                XkbStateRec state;
+                XkbGetState(dpy, XkbUseCoreKbd, &state);
+
+                printf("%s: keycode=%u, mask=0x%x\n",
+                       ev.xcookie.evtype == XI_RawKeyPress ? "press" : "release",
+                       keycode, state.mods);
+            }
 
             XFreeEventData(dpy, &ev.xcookie);
         }
-        //if(ev.type == GenericEvent && ev.xcookie.extension == opcode) {
-        //    XGetEventData(dpy, &ev.xcookie);
-        //    XIRawEvent *re = (XIRawEvent*) ev.xcookie.data;
-        //    KeyCode keycode = re->detail;
-        //    KeySym ks = XkbKeycodeToKeysym(dpy, keycode, 0, 0);
-        //    if(ks == NoSymbol) {
-        //        XFreeEventData(dpy, &ev.xcookie);
-        //        continue;
-        //    }
-        //    printf("%d %u", keycode, mask);
-        //    fflush(stdout);
-        //    XFreeEventData(dpy, &ev.xcookie);
-        //}
     }
+
+    XCloseDisplay(dpy);
+    return 0;
 }
 
