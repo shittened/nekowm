@@ -12,3 +12,4 @@ config.border_width = 4
 config.bar_height = 30
 config.bar_margin_lr = 20
 config.bar_border = 4
+config.bar_widgets = ['Ohayo','$time', '$date']

@@ -46,6 +46,9 @@ export function Keybindings(X: any, root: number, key: number, mask: number, key
                 case 'XK_f':
                     Exec('pcmanfm')
                     break
+                case 'XK_Print':
+                    Exec('flameshot full')
+                    break
             }
             break
 

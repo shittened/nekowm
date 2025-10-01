@@ -167,6 +167,6 @@ x11.createClient({display: screen}, (err: any, display: any, ) => {
         exec(config.startup[i])
     }
 
-    Bar(createCanvas, X, root, resolution, config)
+    Bar(createCanvas, X, root, resolution, config, variables)
     //exec('python3 ~/projects/nekowm/src/nekobar.py')
 })
